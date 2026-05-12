@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\user\\\\Downloads\\\\daily-app-challenge\")",
+      "WebFetch(domain:pin.it)",
+      "WebFetch(domain:api.pinterest.com)"
+    ]
+  }
+}
