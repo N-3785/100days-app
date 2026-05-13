@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 002 — デジタル時計</title>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-7JYG0E25PG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-7JYG0E25PG');
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+  }
+
+  /* 星の背景 */
+  .bubble {
+    position: fixed;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.85);
+    animation: twinkle ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50%       { opacity: 1;   transform: scale(1.4); }
+  }
+
+  @keyframes float {
+    0%   { transform: translateY(110vh) scale(0.8); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateY(-10vh) scale(1.1); opacity: 0; }
+  }
+
+  /* キャラクター */
+  .character-wrap {
+    margin-bottom: 24px;
+    animation: bobbing 3s ease-in-out infinite;
+  }
+
+  @keyframes bobbing {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-10px); }
+  }
+
+  /* 時計カード */
+  .card {
+    background: white;
+    border-radius: 28px;
+    padding: 48px 56px;
+    box-shadow: 0 12px 40px rgba(100,200,160,0.25);
+    text-align: center;
+    min-width: 340px;
+  }
+
+  .time-display {
+    font-size: 72px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: #2d7a56;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .colon {
+    animation: blink 1s step-start infinite;
+    color: #5bbf8a;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  .seconds-bar-wrap {
+    margin: 20px 0 8px;
+    background: #e8f8f0;
+    border-radius: 99px;
+    height: 8px;
+    overflow: hidden;
+  }
+
+  .seconds-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #5bbf8a, #3aa870);
+    border-radius: 99px;
+    transition: width 0.9s linear;
+  }
+
+  .date-display {
+    font-size: 18px;
+    color: #7abf9a;
+    margin-top: 12px;
+    letter-spacing: 1px;
+  }
+
+  .day-display {
+    font-size: 14px;
+    color: #a0cfb8;
+    margin-top: 4px;
+  }
+
+  /* 吹き出し */
+  .bubble-msg {
+    margin-top: 20px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    padding: 10px 20px;
+    font-size: 15px;
+    color: rgba(255,255,255,0.85);
+    min-height: 40px;
+    transition: opacity 0.4s;
+    backdrop-filter: blur(6px);
+  }
+
+  .day002-label {
+    margin-top: 28px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="character-wrap">
+  <svg width="100" height="110" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- 体 -->
+    <ellipse cx="50" cy="85" rx="22" ry="18" fill="#7de0aa"/>
+    <!-- 頭 -->
+    <circle cx="50" cy="48" r="30" fill="#a8f0c8"/>
+    <!-- 目 -->
+    <ellipse cx="40" cy="46" rx="5" ry="6" fill="white"/>
+    <ellipse cx="60" cy="46" rx="5" ry="6" fill="white"/>
+    <circle id="eye-l" cx="41" cy="47" r="3" fill="#2d7a56"/>
+    <circle id="eye-r" cx="61" cy="47" r="3" fill="#2d7a56"/>
+    <!-- ハイライト -->
+    <circle cx="42" cy="45" r="1.2" fill="white"/>
+    <circle cx="62" cy="45" r="1.2" fill="white"/>
+    <!-- 口 -->
+    <path id="mouth" d="M43 57 Q50 63 57 57" stroke="#2d7a56" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- 腕 -->
+    <ellipse cx="24" cy="84" rx="6" ry="11" fill="#7de0aa" transform="rotate(-15 24 84)"/>
+    <ellipse cx="76" cy="84" rx="6" ry="11" fill="#7de0aa" transform="rotate(15 76 84)"/>
+    <!-- 時計マーク（体の中） -->
+    <circle cx="50" cy="86" r="8" fill="white" opacity="0.6"/>
+    <line x1="50" y1="86" x2="50" y2="80" stroke="#2d7a56" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="50" y1="86" x2="55" y2="86" stroke="#2d7a56" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+</div>
+
+<div class="card">
+  <div class="time-display">
+    <span id="hh">00</span><span class="colon">:</span><span id="mm">00</span><span class="colon">:</span><span id="ss">00</span>
+  </div>
+  <div class="seconds-bar-wrap">
+    <div class="seconds-bar" id="seconds-bar"></div>
+  </div>
+  <div class="date-display" id="date-display"></div>
+  <div class="day-display" id="day-display"></div>
+</div>
+
+<div class="bubble-msg" id="msg">今日も一日がんばろう！</div>
+
+<div class="day002-label">DAY 002 / 100</div>
+
+<!-- 背景の泡 -->
+<script>
+  for (let i = 0; i < 80; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = 1.5 + Math.random() * 3;
+    b.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${2+Math.random()*4}s;animation-delay:${Math.random()*5}s;`;
+    document.body.appendChild(b);
+  }
+</script>
+
+<script>
+  const DAYS = ['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'];
+  const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  const MESSAGES = {
+    morning:   ['おはよう！今日も一緒にがんばろう🌿', 'いい朝だね！', '今日も笑顔でいこう！'],
+    noon:      ['もうお昼だよ！ご飯食べた？🍱', 'お昼休憩してる？', '午後もファイト！'],
+    afternoon: ['もう少しで夕方だね', 'おやつの時間かも🍵', '集中してる？えらいえらい'],
+    evening:   ['お疲れさま！今日もよく頑張ったね🌙', 'ゆっくり休んでね', 'お疲れ！今日も最高だったよ'],
+    night:     ['夜更かししてる？😴', 'そろそろ寝ようよ…', 'おやすみなさい🌙'],
+  };
+
+  function getTimeZone(h) {
+    if (h < 6)  return 'night';
+    if (h < 12) return 'morning';
+    if (h < 14) return 'noon';
+    if (h < 18) return 'afternoon';
+    if (h < 22) return 'evening';
+    return 'night';
+  }
+
+  let lastMinute = -1;
+
+  function tick() {
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+
+    document.getElementById('hh').textContent = String(h).padStart(2,'0');
+    document.getElementById('mm').textContent = String(m).padStart(2,'0');
+    document.getElementById('ss').textContent = String(s).padStart(2,'0');
+
+    const bar = document.getElementById('seconds-bar');
+    if (s === 0) bar.style.transition = 'none';
+    else bar.style.transition = 'width 0.9s linear';
+    bar.style.width = (s / 59 * 100) + '%';
+
+    document.getElementById('date-display').textContent =
+      `${now.getFullYear()}年 ${MONTHS[now.getMonth()]} ${now.getDate()}日`;
+    document.getElementById('day-display').textContent = DAYS[now.getDay()];
+
+    // 毎分メッセージを更新
+    if (m !== lastMinute) {
+      lastMinute = m;
+      const zone = getTimeZone(h);
+      const msgs = MESSAGES[zone];
+      document.getElementById('msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+    }
+  }
+
+  tick();
+  setInterval(tick, 1000);
+</script>
+
+</body>
+</html>
