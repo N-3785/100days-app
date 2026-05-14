@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 003 — BMI 計算機</title>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-7JYG0E25PG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-7JYG0E25PG');
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 24px 16px;
+  }
+
+  /* 浮かぶ丸 */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.18), rgba(100,200,255,0.05));
+    border: 1px solid rgba(100,200,255,0.12);
+    animation: drift ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes drift {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%       { transform: translateY(-20px) rotate(180deg); }
+  }
+
+  /* キャラクター */
+  .character-wrap {
+    margin-bottom: 16px;
+    animation: bobbing 3s ease-in-out infinite;
+  }
+
+  @keyframes bobbing {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-10px); }
+  }
+
+  /* カード */
+  .card {
+    background: rgba(255,255,255,0.97);
+    border-radius: 28px;
+    padding: 36px 40px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .card-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a3a5c;
+    margin-bottom: 24px;
+  }
+
+  /* 入力 */
+  .input-group {
+    margin-bottom: 16px;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a6fa5;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f0f5ff;
+    border: 2px solid #c8d8f0;
+    border-radius: 14px;
+    padding: 10px 16px;
+    transition: border-color 0.2s;
+  }
+
+  .input-row:focus-within {
+    border-color: #4a8fe0;
+  }
+
+  .input-row input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a3a5c;
+    outline: none;
+    width: 100%;
+  }
+
+  .input-row input::placeholder {
+    color: #b0c4de;
+    font-weight: 400;
+    font-size: 20px;
+  }
+
+  .input-row .unit {
+    font-size: 16px;
+    font-weight: 600;
+    color: #7a9cc8;
+    white-space: nowrap;
+  }
+
+  /* スライダー */
+  .slider {
+    width: 100%;
+    margin-top: 8px;
+    accent-color: #4a8fe0;
+    cursor: pointer;
+  }
+
+  /* ボタン */
+  .calc-btn {
+    width: 100%;
+    padding: 16px;
+    margin-top: 8px;
+    background: linear-gradient(135deg, #4a8fe0, #2563c7);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 6px 20px rgba(74,143,224,0.4);
+  }
+
+  .calc-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(74,143,224,0.5);
+  }
+
+  .calc-btn:active {
+    transform: translateY(0);
+  }
+
+  /* 結果エリア */
+  .result-area {
+    margin-top: 24px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+
+  .result-area.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .bmi-value {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    color: #1a3a5c;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.4s;
+  }
+
+  .bmi-label {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 20px;
+    border-radius: 99px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: background 0.4s, color 0.4s;
+  }
+
+  /* ゲージ */
+  .gauge-wrap {
+    margin-top: 20px;
+    position: relative;
+    height: 14px;
+    border-radius: 99px;
+    background: linear-gradient(90deg,
+      #64b5f6 0%,
+      #81c784 25%,
+      #fff176 50%,
+      #ffb74d 70%,
+      #e57373 100%
+    );
+    overflow: visible;
+  }
+
+  .gauge-pointer {
+    position: absolute;
+    top: -6px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #1a3a5c;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    transform: translateX(-50%);
+    transition: left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 10px;
+    color: #7a9cc8;
+    font-weight: 600;
+  }
+
+  .message-box {
+    margin-top: 16px;
+    padding: 12px 18px;
+    background: #f0f5ff;
+    border-radius: 14px;
+    font-size: 14px;
+    color: #3a5a8a;
+    line-height: 1.6;
+  }
+
+  .day003-label {
+    margin-top: 24px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 2px;
+  }
+</style>
+</head>
+<body>
+
+<!-- 浮かぶ丸 背景 -->
+<script>
+  const ORB_CONFIG = [
+    {w:180,h:180,l:5,t:10,d:6},
+    {w:120,h:120,l:75,t:5,d:8},
+    {w:90,h:90,l:15,t:70,d:5},
+    {w:150,h:150,l:65,t:65,d:7},
+    {w:60,h:60,l:45,t:40,d:4},
+  ];
+  ORB_CONFIG.forEach(o => {
+    const el = document.createElement('div');
+    el.className = 'orb';
+    el.style.cssText = `width:${o.w}px;height:${o.h}px;left:${o.l}%;top:${o.t}%;animation-duration:${o.d}s;animation-delay:${Math.random()*3}s;`;
+    document.body.appendChild(el);
+  });
+</script>
+
+<!-- キャラクター（健康系・聴診器持ち） -->
+<div class="character-wrap">
+  <svg width="100" height="115" viewBox="0 0 100 115" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- 体 -->
+    <ellipse cx="50" cy="90" rx="22" ry="18" fill="#6ab4f5"/>
+    <!-- 頭 -->
+    <circle cx="50" cy="50" r="30" fill="#a8d8f8"/>
+    <!-- 白衣のえり -->
+    <path d="M32 90 Q50 78 68 90" fill="white" opacity="0.9"/>
+    <!-- 目 -->
+    <ellipse cx="40" cy="48" rx="5" ry="6" fill="white"/>
+    <ellipse cx="60" cy="48" rx="5" ry="6" fill="white"/>
+    <circle cx="41" cy="49" r="3" fill="#1a3a5c"/>
+    <circle cx="61" cy="49" r="3" fill="#1a3a5c"/>
+    <circle cx="42" cy="47" r="1.2" fill="white"/>
+    <circle cx="62" cy="47" r="1.2" fill="white"/>
+    <!-- まゆ -->
+    <path d="M35 41 Q40 38 45 41" stroke="#4a7ab0" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M55 41 Q60 38 65 41" stroke="#4a7ab0" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- 口 -->
+    <path d="M43 59 Q50 65 57 59" stroke="#1a3a5c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- 腕（右：聴診器持ち） -->
+    <ellipse cx="24" cy="88" rx="6" ry="11" fill="#6ab4f5" transform="rotate(-12 24 88)"/>
+    <ellipse cx="76" cy="88" rx="6" ry="11" fill="#6ab4f5" transform="rotate(12 76 88)"/>
+    <!-- 聴診器アイコン（体に） -->
+    <circle cx="50" cy="91" r="7" fill="white" opacity="0.5"/>
+    <path d="M46 89 Q46 95 50 95 Q54 95 54 89" stroke="#1a3a5c" stroke-width="1.8" fill="none"/>
+    <circle cx="50" cy="87" r="2" fill="#1a3a5c"/>
+  </svg>
+</div>
+
+<div class="card">
+  <div class="card-title">BMI 計算機</div>
+
+  <div class="input-group">
+    <label>身長</label>
+    <div class="input-row">
+      <input type="number" id="height" placeholder="170" min="50" max="250" step="0.1">
+      <span class="unit">cm</span>
+    </div>
+    <input type="range" class="slider" id="height-slider" min="100" max="220" step="0.5" value="170">
+  </div>
+
+  <div class="input-group">
+    <label>体重</label>
+    <div class="input-row">
+      <input type="number" id="weight" placeholder="65" min="1" max="300" step="0.1">
+      <span class="unit">kg</span>
+    </div>
+    <input type="range" class="slider" id="weight-slider" min="30" max="150" step="0.5" value="65">
+  </div>
+
+  <button class="calc-btn" id="calc-btn" onclick="calculate()">計算する</button>
+
+  <div class="result-area" id="result">
+    <div class="bmi-value" id="bmi-num">--</div>
+    <div>
+      <span class="bmi-label" id="bmi-label">---</span>
+    </div>
+    <div class="gauge-wrap" id="gauge-wrap">
+      <div class="gauge-pointer" id="gauge-pointer" style="left:50%"></div>
+    </div>
+    <div class="gauge-labels">
+      <span>痩せ</span>
+      <span>普通</span>
+      <span>過体重</span>
+      <span>肥満</span>
+    </div>
+    <div class="message-box" id="message-box"></div>
+  </div>
+</div>
+
+<div class="day003-label">DAY 003 / 100</div>
+
+<script>
+  // スライダーと入力を同期
+  const heightInput  = document.getElementById('height');
+  const weightInput  = document.getElementById('weight');
+  const heightSlider = document.getElementById('height-slider');
+  const weightSlider = document.getElementById('weight-slider');
+
+  heightInput.addEventListener('input',  () => { heightSlider.value = heightInput.value; });
+  heightSlider.addEventListener('input', () => { heightInput.value  = heightSlider.value; });
+  weightInput.addEventListener('input',  () => { weightSlider.value = weightInput.value; });
+  weightSlider.addEventListener('input', () => { weightInput.value  = weightSlider.value; });
+
+  // Enterキーで計算
+  [heightInput, weightInput].forEach(el => {
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+  });
+
+  const CATEGORIES = [
+    { max: 18.5, label: '低体重（痩せ）',  bg: '#bbdefb', color: '#1565c0',
+      msg: '少し体重が少なめです。栄養バランスの良い食事を心がけてみましょう。' },
+    { max: 25.0, label: '普通体重',         bg: '#c8e6c9', color: '#2e7d32',
+      msg: '理想的な体重です！この調子を維持しましょう。バランスの良い食事と適度な運動が大切です。' },
+    { max: 30.0, label: '肥満度 1',         bg: '#fff9c4', color: '#f57f17',
+      msg: '少し体重が多めです。適度な運動と食生活の見直しを意識してみましょう。' },
+    { max: 35.0, label: '肥満度 2',         bg: '#ffe0b2', color: '#e65100',
+      msg: '生活習慣病のリスクが高まります。医師や栄養士に相談することをおすすめします。' },
+    { max: 40.0, label: '肥満度 3',         bg: '#ffcdd2', color: '#c62828',
+      msg: '健康リスクが高い状態です。専門医への受診をご検討ください。' },
+    { max: Infinity, label: '肥満度 4',     bg: '#ef9a9a', color: '#b71c1c',
+      msg: '早めに医療機関を受診することをお勧めします。' },
+  ];
+
+  function bmiToGaugePercent(bmi) {
+    // ゲージ範囲: 15（左端）〜 40（右端）
+    const minBmi = 15, maxBmi = 40;
+    return Math.max(2, Math.min(98, (bmi - minBmi) / (maxBmi - minBmi) * 100));
+  }
+
+  function calculate() {
+    const h = parseFloat(heightInput.value);
+    const w = parseFloat(weightInput.value);
+
+    if (!h || !w || h <= 0 || w <= 0) {
+      heightInput.style.color = '#e53935';
+      weightInput.style.color = '#e53935';
+      setTimeout(() => {
+        heightInput.style.color = '';
+        weightInput.style.color = '';
+      }, 800);
+      return;
+    }
+
+    const bmi = w / ((h / 100) ** 2);
+    const cat = CATEGORIES.find(c => bmi < c.max);
+
+    // 結果表示
+    document.getElementById('bmi-num').textContent = bmi.toFixed(1);
+    document.getElementById('bmi-num').style.color = cat.color;
+
+    const labelEl = document.getElementById('bmi-label');
+    labelEl.textContent = cat.label;
+    labelEl.style.background = cat.bg;
+    labelEl.style.color = cat.color;
+
+    // ゲージポインター
+    const pct = bmiToGaugePercent(bmi);
+    document.getElementById('gauge-pointer').style.left = pct + '%';
+    document.getElementById('gauge-pointer').style.borderColor = cat.color;
+
+    document.getElementById('message-box').textContent = cat.msg;
+
+    const result = document.getElementById('result');
+    result.classList.add('visible');
+
+    // ボタンアニメーション
+    const btn = document.getElementById('calc-btn');
+    btn.textContent = '再計算';
+  }
+</script>
+
+</body>
+</html>
