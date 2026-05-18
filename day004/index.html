@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 004 — コインフリッパー</title>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-7JYG0E25PG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-7JYG0E25PG');
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    transition: background 4s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 24px 16px;
+  }
+
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.18), rgba(100,200,255,0.05));
+    border: 1px solid rgba(100,200,255,0.12);
+    animation: drift ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes drift {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%       { transform: translateY(-20px) rotate(180deg); }
+  }
+
+  .character-wrap {
+    margin-bottom: 16px;
+    animation: bobbing 3s ease-in-out infinite;
+  }
+
+  @keyframes bobbing {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-10px); }
+  }
+
+  .card {
+    background: rgba(255,255,255,0.97);
+    border-radius: 28px;
+    padding: 32px 36px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .card-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a3a5c;
+    margin-bottom: 24px;
+  }
+
+  /* ── 3D Coin ── */
+  .coin-scene {
+    perspective: 600px;
+    width: 148px;
+    height: 148px;
+    margin: 0 auto 8px;
+  }
+
+  .coin-wrapper {
+    width: 100%;
+    height: 100%;
+  }
+
+  @keyframes coinThrow {
+    0%   { transform: translateY(0)    scale(1);    }
+    25%  { transform: translateY(-68px) scale(1.1); }
+    55%  { transform: translateY(-55px) scale(1.06);}
+    80%  { transform: translateY(-20px) scale(1.02);}
+    100% { transform: translateY(0)    scale(1);    }
+  }
+
+  .coin-wrapper.throwing {
+    animation: coinThrow 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .coin {
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    position: relative;
+  }
+
+  .coin-face,
+  .coin-back {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 5px 10px rgba(255,255,255,0.55),
+                0 8px 24px rgba(0,0,0,0.28);
+  }
+
+  .coin-face {
+    background: radial-gradient(circle at 38% 32%, #fff0a0, #e6c000 45%, #a07010 80%);
+  }
+
+  .coin-back {
+    background: radial-gradient(circle at 62% 32%, #fff0a0, #e6c000 45%, #a07010 80%);
+    transform: rotateY(180deg);
+  }
+
+  /* inner ridge ring */
+  .coin-face::before,
+  .coin-back::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    border: 3px solid rgba(160, 112, 16, 0.5);
+    pointer-events: none;
+  }
+
+  /* ── Result ── */
+  .result-text {
+    text-align: center;
+    font-size: 30px;
+    font-weight: 800;
+    min-height: 42px;
+    margin: 16px 0 20px;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.35s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    letter-spacing: 1px;
+    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI', sans-serif;
+  }
+
+  .result-text.visible       { opacity: 1; transform: scale(1); }
+  .result-text.result-heads  { color: #c77f00; }
+  .result-text.result-tails  { color: #2563c7; }
+
+  /* ── Stats ── */
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .stat-box {
+    flex: 1;
+    background: #f0f5ff;
+    border-radius: 16px;
+    padding: 14px 8px;
+    text-align: center;
+    border: 2px solid #e0e8f8;
+    transition: border-color 0.3s, background 0.3s;
+  }
+
+  .stat-box.hl-heads { border-color: #d4a017; background: #fffbeb; }
+  .stat-box.hl-tails { border-color: #4a8fe0; background: #eff6ff; }
+
+  .stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #7a9cc8;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 800;
+    color: #1a3a5c;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f7f9ff;
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #4a6fa5;
+    font-weight: 600;
+  }
+
+  /* ── Buttons ── */
+  .flip-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    box-shadow: 0 6px 20px rgba(245,158,11,0.4);
+  }
+
+  .flip-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(245,158,11,0.5);
+  }
+
+  .flip-btn:active:not(:disabled) { transform: translateY(0); }
+
+  .flip-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .reset-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    background: transparent;
+    color: #7a9cc8;
+    border: 2px solid #c8d8f0;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .reset-btn:hover {
+    border-color: #4a8fe0;
+    color: #4a8fe0;
+  }
+
+  .day-label {
+    margin-top: 24px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 2px;
+  }
+
+  /* keyboard hint */
+  .hint {
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<script>
+  [
+    {w:180,h:180,l:5,t:10,d:6},
+    {w:120,h:120,l:75,t:5,d:8},
+    {w:90,h:90,l:15,t:70,d:5},
+    {w:150,h:150,l:65,t:65,d:7},
+    {w:60,h:60,l:45,t:40,d:4},
+  ].forEach(o => {
+    const el = document.createElement('div');
+    el.className = 'orb';
+    el.style.cssText = `width:${o.w}px;height:${o.h}px;left:${o.l}%;top:${o.t}%;animation-duration:${o.d}s;animation-delay:${(Math.random()*3).toFixed(1)}s;`;
+    document.body.appendChild(el);
+  });
+</script>
+
+<!-- Character: wizard holding a coin -->
+<div class="character-wrap">
+  <svg width="100" height="120" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- body -->
+    <ellipse cx="50" cy="93" rx="22" ry="18" fill="#7c3aed"/>
+    <!-- robe collar -->
+    <path d="M32 93 Q50 81 68 93" fill="#5b21b6" opacity="0.7"/>
+    <!-- head -->
+    <circle cx="50" cy="53" r="28" fill="#fcd5b0"/>
+    <!-- wizard hat -->
+    <polygon points="50,8 36,47 64,47" fill="#5b21b6"/>
+    <ellipse cx="50" cy="47" rx="16" ry="5" fill="#6d28d9"/>
+    <!-- hat star -->
+    <polygon points="50,16 52,23 59,23 53,27 56,34 50,30 44,34 47,27 41,23 48,23" fill="#fcd34d"/>
+    <!-- eyes -->
+    <ellipse cx="41" cy="51" rx="5" ry="5.5" fill="white"/>
+    <ellipse cx="59" cy="51" rx="5" ry="5.5" fill="white"/>
+    <circle cx="42" cy="52" r="3" fill="#1a1a2e"/>
+    <circle cx="60" cy="52" r="3" fill="#1a1a2e"/>
+    <circle cx="43" cy="50" r="1.2" fill="white"/>
+    <circle cx="61" cy="50" r="1.2" fill="white"/>
+    <!-- eyebrows -->
+    <path d="M36 44 Q41 41 46 44" stroke="#8b6914" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M54 44 Q59 41 64 44" stroke="#8b6914" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- big smile -->
+    <path d="M43 62 Q50 68 57 62" stroke="#8b6914" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- arms -->
+    <ellipse cx="26" cy="91" rx="6" ry="11" fill="#7c3aed" transform="rotate(-15 26 91)"/>
+    <ellipse cx="74" cy="91" rx="6" ry="11" fill="#7c3aed" transform="rotate(15 74 91)"/>
+    <!-- gold coin in right hand -->
+    <circle cx="81" cy="104" r="9" fill="#fbbf24" stroke="#d97706" stroke-width="2"/>
+    <circle cx="81" cy="104" r="6" fill="none" stroke="#d97706" stroke-width="1"/>
+    <text x="81" y="108" text-anchor="middle" font-family="serif" font-size="9" fill="#92400e" font-weight="bold">¥</text>
+  </svg>
+</div>
+
+<div class="card">
+  <div class="card-title">コインフリッパー</div>
+
+  <!-- 3D Coin -->
+  <div class="coin-scene">
+    <div class="coin-wrapper" id="coin-wrapper">
+      <div class="coin" id="coin">
+        <!-- Heads / 表 -->
+        <div class="coin-face">
+          <svg width="100%" height="100%" viewBox="0 0 100 100">
+            <polygon points="50,20 54,34 68,34 57,43 61,57 50,49 39,57 43,43 32,34 46,34"
+                     fill="#92400e" opacity="0.82"/>
+            <text x="50" y="80" text-anchor="middle" font-family="serif"
+                  font-size="20" fill="#6b3000" font-weight="bold">表</text>
+          </svg>
+        </div>
+        <!-- Tails / 裏 -->
+        <div class="coin-back">
+          <svg width="100%" height="100%" viewBox="0 0 100 100">
+            <circle cx="50" cy="37" r="13" fill="none" stroke="#92400e" stroke-width="2.5" opacity="0.7"/>
+            <circle cx="50" cy="37" r="7"  fill="#92400e" opacity="0.6"/>
+            <text x="50" y="80" text-anchor="middle" font-family="serif"
+                  font-size="20" fill="#6b3000" font-weight="bold">裏</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result message -->
+  <div class="result-text" id="result-text"></div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-box" id="heads-box">
+      <div class="stat-label">表（おもて）</div>
+      <div class="stat-value" id="heads-count">0</div>
+    </div>
+    <div class="stat-box" id="tails-box">
+      <div class="stat-label">裏（うら）</div>
+      <div class="stat-value" id="tails-count">0</div>
+    </div>
+  </div>
+
+  <div class="total-row">
+    <span>総投数：<strong id="total-count">0</strong> 回</span>
+    <span>表率：<strong id="heads-ratio">—</strong></span>
+  </div>
+
+  <button class="flip-btn" id="flip-btn" onclick="flipCoin()">コインを投げる</button>
+  <button class="reset-btn" onclick="resetStats()">リセット</button>
+</div>
+
+<div class="day-label">DAY 004 / 100</div>
+<div class="hint">Space / Enter でも投げられます</div>
+
+<script>
+  let isFlipping  = false;
+  let totalAngle  = 0;
+  let headsCount  = 0;
+  let tailsCount  = 0;
+
+  const coin       = document.getElementById('coin');
+  const wrapper    = document.getElementById('coin-wrapper');
+  const resultText = document.getElementById('result-text');
+  const flipBtn    = document.getElementById('flip-btn');
+  const headsBox   = document.getElementById('heads-box');
+  const tailsBox   = document.getElementById('tails-box');
+
+  function flipCoin() {
+    if (isFlipping) return;
+    isFlipping = true;
+    flipBtn.disabled = true;
+
+    // hide previous result
+    resultText.className = 'result-text';
+
+    const isHeads = Math.random() < 0.5;
+
+    // compute target angle: heads=0°, tails=180° (mod 360)
+    const currentMod = ((totalAngle % 360) + 360) % 360;
+    const targetMod  = isHeads ? 0 : 180;
+    let delta = targetMod - currentMod;
+    if (delta <= 0) delta += 360;
+    delta += 4 * 360; // 4 extra full rotations for drama
+    totalAngle += delta;
+
+    coin.style.transition = 'transform 1.5s cubic-bezier(0.2, 0.8, 0.3, 1)';
+    coin.style.transform  = `rotateY(${totalAngle}deg)`;
+
+    wrapper.classList.add('throwing');
+
+    setTimeout(() => {
+      wrapper.classList.remove('throwing');
+
+      if (isHeads) {
+        headsCount++;
+        resultText.textContent = '表！　★';
+        resultText.className   = 'result-text visible result-heads';
+        headsBox.classList.add('hl-heads');
+        tailsBox.classList.remove('hl-tails');
+      } else {
+        tailsCount++;
+        resultText.textContent = '裏！　◎';
+        resultText.className   = 'result-text visible result-tails';
+        tailsBox.classList.add('hl-tails');
+        headsBox.classList.remove('hl-heads');
+      }
+
+      const total = headsCount + tailsCount;
+      document.getElementById('heads-count').textContent = headsCount;
+      document.getElementById('tails-count').textContent = tailsCount;
+      document.getElementById('total-count').textContent = total;
+      document.getElementById('heads-ratio').textContent =
+        Math.round(headsCount / total * 100) + '%';
+
+      flipBtn.disabled = false;
+      isFlipping = false;
+    }, 1500);
+  }
+
+  function resetStats() {
+    headsCount = 0;
+    tailsCount = 0;
+    document.getElementById('heads-count').textContent = '0';
+    document.getElementById('tails-count').textContent = '0';
+    document.getElementById('total-count').textContent = '0';
+    document.getElementById('heads-ratio').textContent = '—';
+    resultText.className   = 'result-text';
+    resultText.textContent = '';
+    headsBox.classList.remove('hl-heads');
+    tailsBox.classList.remove('hl-tails');
+    // reset coin to heads face without animation
+    coin.style.transition = 'none';
+    coin.style.transform  = 'rotateY(0deg)';
+    totalAngle = 0;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'Enter') {
+      e.preventDefault();
+      flipCoin();
+    }
+  });
+
+  // ── Time-based background ──
+  const TIME_THEMES = [
+    { hour:  0, label: '深夜',   bg: 'linear-gradient(160deg, #080818 0%, #0b1025 50%, #0a1835 100%)' },
+    { hour:  5, label: '夜明け', bg: 'linear-gradient(160deg, #1c0828 0%, #3e1242 50%, #6e200e 100%)' },
+    { hour:  7, label: '朝焼け', bg: 'linear-gradient(160deg, #2c1030 0%, #7e2a42 50%, #cc5018 100%)' },
+    { hour: 10, label: '午前',   bg: 'linear-gradient(160deg, #082040 0%, #103878 50%, #1860c0 100%)' },
+    { hour: 14, label: '昼',     bg: 'linear-gradient(160deg, #051838 0%, #0c2e68 50%, #0e5298 100%)' },
+    { hour: 17, label: '夕焼け', bg: 'linear-gradient(160deg, #201030 0%, #722a40 50%, #c05810 100%)' },
+    { hour: 19, label: '夕夜',   bg: 'linear-gradient(160deg, #180820 0%, #321252 50%, #1a2240 100%)' },
+    { hour: 22, label: '夜',     bg: 'linear-gradient(160deg, #0a0a1e 0%, #0d1532 50%, #0a1c3c 100%)' },
+  ];
+
+  const timeLabel = document.querySelector('.hint');
+
+  function updateBackground() {
+    const hour = new Date().getHours();
+    let theme = TIME_THEMES[0];
+    for (let i = TIME_THEMES.length - 1; i >= 0; i--) {
+      if (hour >= TIME_THEMES[i].hour) { theme = TIME_THEMES[i]; break; }
+    }
+    document.body.style.background = theme.bg;
+    timeLabel.textContent = `${theme.label} ／ Space・Enter でも投げられます`;
+  }
+
+  updateBackground();
+  setInterval(updateBackground, 60 * 1000);
+</script>
+
+</body>
+</html>
